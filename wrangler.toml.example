@@ -1,0 +1,49 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "clawmail"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# --- D1 Database ---
+# Create with: wrangler d1 create clawmail-db
+# Then paste the database_id below
+[[d1_databases]]
+binding = "DB"
+database_name = "clawmail-db"
+database_id = "your-database-id"
+migrations_dir = "migrations"
+
+# --- R2 Bucket ---
+# Create with: wrangler r2 bucket create clawmail-attachments
+[[r2_buckets]]
+binding = "ATTACHMENTS"
+bucket_name = "clawmail-attachments"
+
+# --- Durable Objects ---
+# McpAgent for MCP server
+[durable_objects]
+bindings = [
+  { name = "MCP_OBJECT", class_name = "EmailMCP" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["EmailMCP"]
+
+# --- Environment Variables ---
+[vars]
+FROM_EMAIL = "mail@yourdomain.com"
+FROM_NAME = "Clawmail"
+
+# --- Secrets ---
+# Set these with:
+#   wrangler secret put API_KEY
+#   wrangler secret put RESEND_API_KEY
+
+# --- Email Routing ---
+# Configure in Cloudflare dashboard:
+#   Email Routing → Routing rules → forward to this Worker
+
+# --- Observability ---
+[observability]
+enabled = true
