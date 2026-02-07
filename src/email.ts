@@ -15,12 +15,20 @@ export async function handleInboundEmail(
   const now = Date.now();
   const msgId = crypto.randomUUID();
 
-  const from = parsed.from?.address ?? message.from;
+  const from = (parsed.from?.address ?? message.from).toLowerCase();
   const to = parsed.to?.[0]?.address ?? message.to;
   const cc = parsed.cc?.map((a) => a.address).join(", ") || null;
   const subject = parsed.subject ?? "(no subject)";
   const rfc822MessageId = parsed.messageId ?? null;
   const inReplyTo = parsed.inReplyTo ?? null;
+
+  // Check if sender is approved
+  const approvedSender = await db
+    .selectFrom("approved_senders")
+    .select("email")
+    .where("email", "=", from)
+    .executeTakeFirst();
+  const approved = approvedSender ? 1 : 0;
 
   // Threading: find existing thread by In-Reply-To or References
   let threadId: string | null = null;
@@ -98,6 +106,7 @@ export async function handleInboundEmail(
       body_html: parsed.html ?? null,
       headers: headersJson,
       direction: "inbound",
+      approved,
       created_at: now,
     })
     .execute();

@@ -21,6 +21,7 @@ export interface MessageTable {
   body_html: string | null;
   headers: string | null;
   direction: "inbound" | "outbound";
+  approved: number;
   created_at: number;
 }
 
@@ -34,10 +35,17 @@ export interface AttachmentTable {
   created_at: number;
 }
 
+export interface ApprovedSenderTable {
+  email: string;
+  name: string | null;
+  created_at: number;
+}
+
 export interface Database {
   threads: ThreadTable;
   messages: MessageTable;
   attachments: AttachmentTable;
+  approved_senders: ApprovedSenderTable;
 }
 
 export type Thread = Selectable<ThreadTable>;
@@ -46,3 +54,5 @@ export type Message = Selectable<MessageTable>;
 export type NewMessage = Insertable<MessageTable>;
 export type Attachment = Selectable<AttachmentTable>;
 export type NewAttachment = Insertable<AttachmentTable>;
+export type ApprovedSender = Selectable<ApprovedSenderTable>;
+export type NewApprovedSender = Insertable<ApprovedSenderTable>;

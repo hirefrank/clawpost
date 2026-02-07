@@ -38,7 +38,7 @@ api.post("/api/send", async (c) => {
   return c.json(result);
 });
 
-// List messages
+// List messages (approved only)
 api.get("/api/messages", async (c) => {
   const db = getDb(c.env.DB);
   const limit = Number(c.req.query("limit") ?? 50);
@@ -49,6 +49,7 @@ api.get("/api/messages", async (c) => {
   let query = db
     .selectFrom("messages")
     .selectAll()
+    .where("approved", "=", 1)
     .orderBy("created_at", "desc")
     .limit(limit)
     .offset(offset);
@@ -60,7 +61,7 @@ api.get("/api/messages", async (c) => {
   return c.json(messages);
 });
 
-// Read single message
+// Read single message (approved only)
 api.get("/api/messages/:id", async (c) => {
   const db = getDb(c.env.DB);
   const id = c.req.param("id");
@@ -69,6 +70,7 @@ api.get("/api/messages/:id", async (c) => {
     .selectFrom("messages")
     .selectAll()
     .where("id", "=", id)
+    .where("approved", "=", 1)
     .executeTakeFirst();
 
   if (!message) return c.json({ error: "Not found" }, 404);
@@ -82,7 +84,7 @@ api.get("/api/messages/:id", async (c) => {
   return c.json({ ...message, attachments });
 });
 
-// Download attachment
+// Download attachment (only from approved messages)
 api.get("/api/attachments/:id", async (c) => {
   const db = getDb(c.env.DB);
   const id = c.req.param("id");
@@ -95,6 +97,15 @@ api.get("/api/attachments/:id", async (c) => {
 
   if (!att) return c.json({ error: "Not found" }, 404);
 
+  // Verify the parent message is approved
+  const msg = await db
+    .selectFrom("messages")
+    .select("approved")
+    .where("id", "=", att.message_id)
+    .executeTakeFirst();
+
+  if (!msg || msg.approved !== 1) return c.json({ error: "Not found" }, 404);
+
   const obj = await c.env.ATTACHMENTS.get(att.r2_key);
   if (!obj) return c.json({ error: "Attachment data not found" }, 404);
 
@@ -106,7 +117,7 @@ api.get("/api/attachments/:id", async (c) => {
   });
 });
 
-// Reply to message
+// Reply to message (approved only)
 api.post("/api/messages/:id/reply", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json<{
@@ -114,12 +125,21 @@ api.post("/api/messages/:id/reply", async (c) => {
     attachments?: { content?: string; filename: string; attachment_id?: string }[];
   }>();
 
+  // Verify message is approved before allowing reply
   const db = getDb(c.env.DB);
+  const msg = await db
+    .selectFrom("messages")
+    .select("approved")
+    .where("id", "=", id)
+    .executeTakeFirst();
+
+  if (!msg || msg.approved !== 1) return c.json({ error: "Not found" }, 404);
+
   const result = await replyToMessage(c.env, db, id, body.body, body.attachments);
   return c.json(result);
 });
 
-// Search messages
+// Search messages (approved only)
 api.get("/api/search", async (c) => {
   const db = getDb(c.env.DB);
   const q = c.req.query("q");
@@ -130,6 +150,7 @@ api.get("/api/search", async (c) => {
   const messages = await db
     .selectFrom("messages")
     .selectAll()
+    .where("approved", "=", 1)
     .where((eb) =>
       eb.or([
         eb("subject", "like", `%${q}%`),
@@ -143,7 +164,7 @@ api.get("/api/search", async (c) => {
   return c.json(messages);
 });
 
-// List threads
+// List threads (only threads that have approved messages)
 api.get("/api/threads", async (c) => {
   const db = getDb(c.env.DB);
   const limit = Number(c.req.query("limit") ?? 50);
@@ -152,6 +173,11 @@ api.get("/api/threads", async (c) => {
   const threads = await db
     .selectFrom("threads")
     .selectAll()
+    .where("id", "in",
+      db.selectFrom("messages")
+        .select("thread_id")
+        .where("approved", "=", 1)
+    )
     .orderBy("last_message_at", "desc")
     .limit(limit)
     .offset(offset)
@@ -160,7 +186,7 @@ api.get("/api/threads", async (c) => {
   return c.json(threads);
 });
 
-// Get thread with messages
+// Get thread with messages (approved messages only)
 api.get("/api/threads/:id", async (c) => {
   const db = getDb(c.env.DB);
   const id = c.req.param("id");
@@ -177,10 +203,89 @@ api.get("/api/threads/:id", async (c) => {
     .selectFrom("messages")
     .selectAll()
     .where("thread_id", "=", id)
+    .where("approved", "=", 1)
     .orderBy("created_at", "asc")
     .execute();
 
+  if (messages.length === 0) return c.json({ error: "Not found" }, 404);
+
   return c.json({ ...thread, messages });
+});
+
+// --- Sender Approval ---
+
+// List pending messages (metadata only — no body content)
+api.get("/api/pending", async (c) => {
+  const db = getDb(c.env.DB);
+  const limit = Number(c.req.query("limit") ?? 50);
+  const offset = Number(c.req.query("offset") ?? 0);
+
+  const messages = await db
+    .selectFrom("messages")
+    .select(["id", "from", "subject", "direction", "created_at"])
+    .where("approved", "=", 0)
+    .orderBy("created_at", "desc")
+    .limit(limit)
+    .offset(offset)
+    .execute();
+
+  return c.json(messages);
+});
+
+// Approve a sender (allowlist + retroactively approve their messages)
+api.post("/api/approved-senders", async (c) => {
+  const { email, name } = await c.req.json<{ email: string; name?: string }>();
+  const db = getDb(c.env.DB);
+  const normalized = email.toLowerCase();
+
+  await db
+    .insertInto("approved_senders")
+    .values({
+      email: normalized,
+      name: name ?? null,
+      created_at: Date.now(),
+    })
+    .onConflict((oc) => oc.column("email").doUpdateSet({ name: name ?? null }))
+    .execute();
+
+  // Retroactively approve all messages from this sender
+  const result = await db
+    .updateTable("messages")
+    .set({ approved: 1 })
+    .where("from", "=", normalized)
+    .where("approved", "=", 0)
+    .execute();
+
+  return c.json({
+    email: normalized,
+    approved_count: Number(result[0]?.numUpdatedRows ?? 0),
+  });
+});
+
+// Remove an approved sender
+api.delete("/api/approved-senders/:email", async (c) => {
+  const email = decodeURIComponent(c.req.param("email")).toLowerCase();
+  const db = getDb(c.env.DB);
+
+  await db
+    .deleteFrom("approved_senders")
+    .where("email", "=", email)
+    .execute();
+
+  return c.json({ removed: email });
+});
+
+// List approved senders
+api.get("/api/approved-senders", async (c) => {
+  const db = getDb(c.env.DB);
+
+  const senders = await db
+    .selectFrom("approved_senders")
+    .selectAll()
+    .orderBy("created_at", "desc")
+    .execute();
+
+  return c.json(senders);
 });
 
 export { api };

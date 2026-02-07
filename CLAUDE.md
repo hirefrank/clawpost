@@ -20,8 +20,8 @@ Cloudflare Worker with two entry points: `fetch` (HTTP) and `email` (inbound ema
 - Everything else → Hono app (`src/api.ts`) which handles `/api/*` with `X-API-Key` auth
 
 **Data flow:**
-- Inbound email (`src/email.ts`): `postal-mime` parses raw email → threads by `In-Reply-To`/`References` headers → D1 for message data, R2 for attachment blobs
-- Outbound email (`src/mail.ts`): Resend SDK sends → stores sent message in D1, attachments in R2
+- Inbound email (`src/email.ts`): `postal-mime` parses raw email → checks `approved_senders` table → stores in D1 with `approved=1` if sender is known, `approved=0` otherwise → attachments to R2
+- Outbound email (`src/mail.ts`): Resend SDK sends → stores sent message in D1 with `approved=1` (always), attachments in R2
 - Both API routes and MCP tools call the same `sendEmail()`/`replyToMessage()` functions from `src/mail.ts`
 
 **MCP server (`src/mcp.ts`):** `McpAgent` Durable Object (from `agents/mcp`) with `McpServer` (from `@modelcontextprotocol/sdk`). Tools registered in `init()` using `this.server.registerTool()` with Zod schemas.
@@ -37,3 +37,4 @@ Cloudflare Worker with two entry points: `fetch` (HTTP) and `email` (inbound ema
 - R2 keys follow `{messageId}/{attachmentId}/{filename}` pattern
 - All timestamps are Unix milliseconds (`Date.now()`)
 - `wrangler.toml` is gitignored; `wrangler.toml.example` is the committed template
+- **Sender approval (anti-injection):** All query routes/tools filter `approved=1` by default. `list_pending` returns metadata only (no body/html) to prevent prompt injection during review. `approve_sender` allowlists + retroactively approves. Sender emails are normalized to lowercase everywhere.

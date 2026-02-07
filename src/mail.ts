@@ -131,6 +131,7 @@ export async function sendEmail(
         ? JSON.stringify(headers)
         : null,
       direction: "outbound",
+      approved: 1,
       created_at: now,
     })
     .execute();
@@ -241,6 +242,7 @@ export async function replyToMessage(
           ? JSON.stringify(replyHeaders)
           : null,
       direction: "outbound",
+      approved: 1,
       created_at: now,
     })
     .execute();
