@@ -8,6 +8,44 @@ Built for [openclaw.ai](https://openclaw.ai).
 
 Connect any MCP client to `https://<your-worker>/mcp` with `Authorization: Bearer <API_KEY>`.
 
+### MCPorter
+
+Add to your `~/.mcporter/mcporter.json` (or `config/mcporter.json`):
+
+```json
+{
+  "mcpServers": {
+    "clawmail": {
+      "description": "Email for AI agents — send, receive, search, and manage threads",
+      "baseUrl": "https://<your-worker>.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CLAWMAIL_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Set the environment variable `CLAWMAIL_API_KEY` to your API key, or replace `${CLAWMAIL_API_KEY}` with the key directly.
+
+### Claude Desktop / Cursor / Other Clients
+
+Use the Streamable HTTP transport with your worker URL and Bearer token auth. Example for Claude Desktop `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "clawmail": {
+      "type": "streamable-http",
+      "url": "https://<your-worker>.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
 ### Email Tools
 
 | Tool | Description |
