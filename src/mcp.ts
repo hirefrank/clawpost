@@ -15,6 +15,11 @@ import {
 } from "./drafts";
 import type { Env } from "./types";
 
+/** Split comma-separated string into trimmed, non-empty parts */
+function parseCommaSeparated(value: string): string[] {
+  return value.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 export class EmailMCP extends McpAgent<Env, {}, {}> {
   server = new McpServer({
     name: "clawmail",
@@ -28,11 +33,11 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
       {
         description: "Send an email via Resend",
         inputSchema: {
-          to: z.union([z.string(), z.array(z.string())]).describe("Recipient email address(es)"),
+          to: z.string().describe("Recipient email address (comma-separated for multiple)"),
           subject: z.string().describe("Email subject"),
           body: z.string().describe("Email body (plain text)"),
-          cc: z.union([z.string(), z.array(z.string())]).optional().describe("CC recipients"),
-          bcc: z.union([z.string(), z.array(z.string())]).optional().describe("BCC recipients"),
+          cc: z.string().optional().describe("CC recipients (comma-separated for multiple)"),
+          bcc: z.string().optional().describe("BCC recipients (comma-separated for multiple)"),
           attachments: z.array(z.object({
             content: z.string().optional().describe("Base64-encoded content"),
             filename: z.string().describe("Filename"),
@@ -42,12 +47,27 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
       },
       async ({ to, subject, body, cc, bcc, attachments }) => {
         const db = getDb(this.env.DB);
-        const result = await sendEmail(this.env, db, { to, subject, body, cc, bcc, attachments });
+        const toList = parseCommaSeparated(to);
+        const ccList = cc ? parseCommaSeparated(cc) : undefined;
+        const bccList = bcc ? parseCommaSeparated(bcc) : undefined;
+        const result = await sendEmail(this.env, db, {
+          to: toList.length === 1 ? toList[0] : toList,
+          subject,
+          body,
+          cc: ccList && ccList.length === 1 ? ccList[0] : ccList,
+          bcc: bccList && bccList.length === 1 ? bccList[0] : bccList,
+          attachments,
+        });
         return {
           content: [
             {
               type: "text" as const,
-              text: `Email sent successfully.\nResend ID: ${result.messageId}\nDB ID: ${result.dbId}\nThread ID: ${result.threadId}`,
+              text: JSON.stringify({
+                status: "sent",
+                resend_id: result.messageId,
+                db_id: result.dbId,
+                thread_id: result.threadId,
+              }),
             },
           ],
         };
@@ -256,7 +276,11 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
           content: [
             {
               type: "text" as const,
-              text: `Reply sent successfully.\nResend ID: ${result.messageId}\nDB ID: ${result.dbId}`,
+              text: JSON.stringify({
+                status: "sent",
+                resend_id: result.messageId,
+                db_id: result.dbId,
+              }),
             },
           ],
         };
@@ -333,12 +357,19 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
         description: "Add one or more labels to an approved message",
         inputSchema: {
           id: z.string().describe("Message ID"),
-          labels: z.array(z.string()).describe("Labels to add"),
+          labels: z.string().describe("Labels to add (comma-separated for multiple, e.g. 'urgent, needs-followup')"),
         },
       },
       async ({ id, labels }) => {
         const db = getDb(this.env.DB);
-        const result = await addLabels(db, id, labels);
+        const labelList = parseCommaSeparated(labels);
+        if (labelList.length === 0) {
+          return {
+            content: [{ type: "text" as const, text: "No labels provided" }],
+            isError: true,
+          };
+        }
+        const result = await addLabels(db, id, labelList);
 
         if (!result) {
           return {
@@ -414,7 +445,7 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
           content: [
             {
               type: "text" as const,
-              text: `Message ${id} archived`,
+              text: JSON.stringify({ status: "archived", id }),
             },
           ],
         };
@@ -444,7 +475,7 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
           content: [
             {
               type: "text" as const,
-              text: `Message ${id} unarchived`,
+              text: JSON.stringify({ status: "unarchived", id }),
             },
           ],
         };
@@ -474,7 +505,7 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
           content: [
             {
               type: "text" as const,
-              text: `Draft created.\nID: ${result.id}`,
+              text: JSON.stringify({ status: "created", id: result.id }),
             },
           ],
         };
@@ -510,7 +541,7 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
           content: [
             {
               type: "text" as const,
-              text: `Draft ${id} updated`,
+              text: JSON.stringify({ status: "updated", id }),
             },
           ],
         };
@@ -564,7 +595,12 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
           content: [
             {
               type: "text" as const,
-              text: `Draft sent successfully.\nResend ID: ${result.messageId}\nDB ID: ${result.dbId}\nThread ID: ${result.threadId}`,
+              text: JSON.stringify({
+                status: "sent",
+                resend_id: result.messageId,
+                db_id: result.dbId,
+                thread_id: result.threadId,
+              }),
             },
           ],
         };
@@ -594,7 +630,7 @@ export class EmailMCP extends McpAgent<Env, {}, {}> {
           content: [
             {
               type: "text" as const,
-              text: `Draft ${id} deleted`,
+              text: JSON.stringify({ status: "deleted", id }),
             },
           ],
         };
