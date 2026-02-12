@@ -41,7 +41,7 @@ Cloudflare Worker with two entry points: `fetch` (HTTP) and `email` (inbound ema
 - Attachments support two input modes: inline base64 (`content` + `filename`) or R2 reference (`attachment_id` to forward an existing attachment)
 - R2 keys follow `{messageId}/{attachmentId}/{filename}` pattern
 - All timestamps are Unix milliseconds (`Date.now()`)
-- `wrangler.toml` is gitignored; `wrangler.toml.example` is the committed template
+- `wrangler.toml` is committed with placeholder values (for Deploy to Cloudflare button). Local changes are hidden via `git update-index --assume-unchanged wrangler.toml`. To edit the committed version: `git update-index --no-assume-unchanged wrangler.toml`
 - **Sender approval (anti-injection):** All query routes/tools filter `approved=1` by default. `list_pending` returns metadata only (no body/html) to prevent prompt injection during review. `approve_sender` allowlists + retroactively approves. Sender emails are normalized to lowercase everywhere.
 - **Labels:** Stored in `message_labels` junction table (composite PK: message_id + label). Use `onConflict(...).doNothing()` when adding labels to handle duplicates.
 - **Archival:** `archived` column on messages (default 0). All list/search queries exclude archived messages unless `include_archived` is explicitly set.
