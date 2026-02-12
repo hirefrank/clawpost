@@ -110,6 +110,22 @@ Status:   Resend webhook → /webhooks/resend → D1 status update
 - **McpAgent** Durable Object serves the MCP endpoint at `/mcp` (Streamable HTTP)
 - **Hono** serves a REST API at `/api/*` for direct HTTP access
 
+## Cost
+
+Clawpost requires the **Cloudflare Workers Paid plan ($5/mo)** for Durable Objects. Everything else fits within free tiers for typical agent usage:
+
+| Service | Free Tier | Paid |
+|---------|-----------|------|
+| **Workers** | 100k requests/day | $0.30/M requests |
+| **D1** | 5M reads/day, 100k writes/day, 5GB storage | $0.75/M reads, $1.00/M writes |
+| **R2** | 10GB storage, 1M writes/mo, 10M reads/mo | $0.015/GB/mo |
+| **Durable Objects** | — | Included in Workers Paid |
+| **Email Routing** (inbound) | Unlimited | — |
+| **Email Service** (outbound) | Requires Workers Paid | — |
+| **Resend** (alternative) | 100 emails/day | From $20/mo |
+
+For a typical agent handling a few hundred emails/month, expect **~$5/mo total** (just the Workers Paid plan).
+
 ## Labels
 
 Messages can be tagged with arbitrary string labels (e.g., `urgent`, `handled`, `needs-followup`). Labels are stored in a junction table and can be used to filter `list_messages`. The consuming agent decides the labeling taxonomy.
