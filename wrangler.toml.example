@@ -43,7 +43,7 @@ name = "EMAIL"
 [vars]
 FROM_EMAIL = "noreply@yourdomain.com"
 FROM_NAME = "Clawmail"
-REPLY_TO_EMAIL = "reply@yourdomain.com"
+# REPLY_TO_EMAIL = "reply@yourdomain.com"  # optional — omit to reply to FROM_EMAIL
 # EMAIL_PROVIDER = "cloudflare"  # or "resend" — auto-detected if omitted
 
 # Resend-specific sender overrides (optional — falls back to FROM_EMAIL / FROM_NAME / REPLY_TO_EMAIL)

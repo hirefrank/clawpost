@@ -57,7 +57,7 @@ export interface Env {
   EMAIL_PROVIDER?: string;
   FROM_EMAIL: string;
   FROM_NAME: string;
-  REPLY_TO_EMAIL: string;
+  REPLY_TO_EMAIL?: string;
   /** Resend-specific overrides (falls back to FROM_EMAIL / FROM_NAME / REPLY_TO_EMAIL) */
   RESEND_FROM_EMAIL?: string;
   RESEND_FROM_NAME?: string;
