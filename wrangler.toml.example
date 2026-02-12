@@ -1,23 +1,23 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "clawmail"
+name = "clawpost"
 main = "src/index.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
 
 # --- D1 Database ---
-# Create with: wrangler d1 create clawmail-db
+# Create with: wrangler d1 create clawpost-db
 # Then paste the database_id below
 [[d1_databases]]
 binding = "DB"
-database_name = "clawmail-db"
+database_name = "clawpost-db"
 database_id = "your-database-id"
 migrations_dir = "migrations"
 
 # --- R2 Bucket ---
-# Create with: wrangler r2 bucket create clawmail-attachments
+# Create with: wrangler r2 bucket create clawpost-attachments
 [[r2_buckets]]
 binding = "ATTACHMENTS"
-bucket_name = "clawmail-attachments"
+bucket_name = "clawpost-attachments"
 
 # --- Durable Objects ---
 # McpAgent for MCP server
@@ -42,14 +42,14 @@ name = "EMAIL"
 # --- Environment Variables ---
 [vars]
 FROM_EMAIL = "noreply@yourdomain.com"
-FROM_NAME = "Clawmail"
+FROM_NAME = "Clawpost"
 # REPLY_TO_EMAIL = "reply@yourdomain.com"  # optional — omit to reply to FROM_EMAIL
 # EMAIL_PROVIDER = "cloudflare"  # or "resend" — auto-detected if omitted
 
 # Resend-specific sender overrides (optional — falls back to FROM_EMAIL / FROM_NAME / REPLY_TO_EMAIL)
 # Use when Resend requires a different sending domain (e.g. notifications.yourdomain.com)
 # RESEND_FROM_EMAIL = "noreply@notifications.yourdomain.com"
-# RESEND_FROM_NAME = "Clawmail"
+# RESEND_FROM_NAME = "Clawpost"
 # RESEND_REPLY_TO_EMAIL = "reply@yourdomain.com"
 
 # Optional: Webhook URL to POST on inbound email (message.received event)

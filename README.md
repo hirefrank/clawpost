@@ -1,4 +1,4 @@
-# Clawmail
+# Clawpost
 
 Email for AI agents. A self-hosted Cloudflare Worker that gives your agent its own email address via an MCP server — send, receive, search, and manage threads with tool calls.
 
@@ -15,18 +15,18 @@ Add to your `~/.mcporter/mcporter.json` (or `config/mcporter.json`):
 ```json
 {
   "mcpServers": {
-    "clawmail": {
+    "clawpost": {
       "description": "Email for AI agents — send, receive, search, and manage threads",
       "baseUrl": "https://<your-worker>.workers.dev/mcp",
       "headers": {
-        "Authorization": "Bearer ${CLAWMAIL_API_KEY}"
+        "Authorization": "Bearer ${CLAWPOST_API_KEY}"
       }
     }
   }
 }
 ```
 
-Set the environment variable `CLAWMAIL_API_KEY` to your API key, or replace `${CLAWMAIL_API_KEY}` with the key directly.
+Set the environment variable `CLAWPOST_API_KEY` to your API key, or replace `${CLAWPOST_API_KEY}` with the key directly.
 
 ### Claude Desktop / Cursor / Other Clients
 
@@ -35,7 +35,7 @@ Use the Streamable HTTP transport with your worker URL and Bearer token auth. Ex
 ```json
 {
   "mcpServers": {
-    "clawmail": {
+    "clawpost": {
       "type": "streamable-http",
       "url": "https://<your-worker>.workers.dev/mcp",
       "headers": {
@@ -120,7 +120,7 @@ Drafts enable human-in-the-loop review before sending. An agent creates a draft,
 
 ### Outbound (message.received)
 
-When `WEBHOOK_URL` is configured, ClawMail POSTs to it on every inbound email with:
+When `WEBHOOK_URL` is configured, ClawPost POSTs to it on every inbound email with:
 
 ```json
 {
@@ -134,7 +134,7 @@ If `WEBHOOK_SECRET` is set, the payload is HMAC-SHA256 signed and the signature 
 
 ### Inbound (delivery status)
 
-ClawMail receives Resend delivery webhooks at `POST /webhooks/resend?token=<RESEND_WEBHOOK_SECRET>` and updates the message `status` field:
+ClawPost receives Resend delivery webhooks at `POST /webhooks/resend?token=<RESEND_WEBHOOK_SECRET>` and updates the message `status` field:
 
 | Resend Event | Status |
 |--------------|--------|
@@ -163,12 +163,12 @@ Inbound emails are **unapproved by default** to prevent prompt injection. An att
 
 ```bash
 # Clone and install
-git clone https://github.com/hirefrank/clawmail.git && cd clawmail
+git clone https://github.com/hirefrank/clawpost.git && cd clawpost
 bun install
 
 # Create Cloudflare resources
-wrangler d1 create clawmail-db           # note the database_id in the output
-wrangler r2 bucket create clawmail-attachments
+wrangler d1 create clawpost-db           # note the database_id in the output
+wrangler r2 bucket create clawpost-attachments
 
 # Configure — copy examples, then fill in real values
 cp wrangler.toml.example wrangler.toml   # paste database_id, set FROM_EMAIL, FROM_NAME
@@ -189,7 +189,7 @@ wrangler secret put RESEND_WEBHOOK_SECRET   # token for Resend delivery webhooks
 bun run deploy
 ```
 
-Then in the Cloudflare dashboard: **Email Routing → Routing rules** → forward your address to the clawmail Worker.
+Then in the Cloudflare dashboard: **Email Routing → Routing rules** → forward your address to the clawpost Worker.
 
 ## REST API
 

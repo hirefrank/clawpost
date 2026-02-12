@@ -1,17 +1,17 @@
 ---
-name: clawmail
+name: clawpost
 description: >-
-  Manage email through the Clawmail MCP server — send, receive, reply, search,
+  Manage email through the Clawpost MCP server — send, receive, reply, search,
   and manage threads and sender approvals. Use when the user asks to check email,
   send a message, reply to someone, search their inbox, or manage approved senders.
 license: MIT
 metadata:
   author: hirefrank
   version: "0.1.0"
-compatibility: Requires a deployed Clawmail worker with MCP connection configured.
+compatibility: Requires a deployed Clawpost worker with MCP connection configured.
 ---
 
-# Clawmail
+# Clawpost
 
 Email tools for AI agents via MCP. All messages go through a sender approval system — only approved senders' messages are visible to query tools.
 

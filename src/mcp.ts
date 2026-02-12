@@ -22,7 +22,7 @@ function parseCommaSeparated(value: string): string[] {
 
 export class EmailMCP extends McpAgent<Env, {}, {}> {
   server = new McpServer({
-    name: "clawmail",
+    name: "clawpost",
     version: "0.2.0",
   });
 
