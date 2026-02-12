@@ -104,16 +104,20 @@ async function providerSend(
           }))
         : undefined;
 
-    // CF Email Service beta only allows X- prefixed custom headers;
-    // standard headers like In-Reply-To and References are rejected.
-    // Filter to only pass X- headers until CF supports standard ones.
-    const cfHeaders = params.headers
-      ? Object.fromEntries(
-          Object.entries(params.headers).filter(([k]) =>
-            k.toLowerCase().startsWith("x-")
-          )
-        )
-      : undefined;
+    // CF Email Service beta rejects headers that don't start with X-.
+    // Strip all non-X- headers (In-Reply-To, References, etc.) for now.
+    let cfHeaders: Record<string, string> | undefined;
+    if (params.headers) {
+      const filtered: Record<string, string> = {};
+      for (const [k, v] of Object.entries(params.headers)) {
+        if (k.toLowerCase().startsWith("x-")) {
+          filtered[k] = v;
+        }
+      }
+      if (Object.keys(filtered).length > 0) {
+        cfHeaders = filtered;
+      }
+    }
 
     const result = await env.EMAIL.send({
       from: params.from,
@@ -123,7 +127,7 @@ async function providerSend(
       cc: params.cc,
       bcc: params.bcc,
       replyTo: params.replyTo,
-      headers: cfHeaders && Object.keys(cfHeaders).length > 0 ? cfHeaders : undefined,
+      ...(cfHeaders ? { headers: cfHeaders } : {}),
       attachments: cfAttachments,
     });
 
